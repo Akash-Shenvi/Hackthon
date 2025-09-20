@@ -15,7 +15,7 @@ if not os.path.exists(JDS_FOLDER):
 # This acts as a simple database. In a real app, use SQLite or PostgreSQL.
 # The keys are "job_ids" and values are the filenames in the 'jds' folder.
 JOB_DESCRIPTIONS = {
-    "1": "senior_data_engineer.pdf" 
+    "1": "fullstack.pdf" 
     # "2": "product_manager.docx"
 }
 
