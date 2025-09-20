@@ -1,15 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
-// --- MOCK DATA ---
-// In a real application, this data would come from a database.
-const mockApplicants = [
-    { id: 1, name: 'Aisha Sharma', degree: 'B.Tech', specialization: 'Computer Science', passingYear: 2024, tenthMarks: 95, twelfthMarks: 92, degreeMarks: 8.8, marksType: 'cgpa', cgpaOutOf: 10, resumeUrl: '#' },
-    { id: 2, name: 'Ben Carter', degree: 'B.E.', specialization: 'Mechanical Engineering', passingYear: 2023, tenthMarks: 88, twelfthMarks: 85, degreeMarks: 7.5, marksType: 'cgpa', cgpaOutOf: 10, resumeUrl: '#' },
-    { id: 3, name: 'Chloe Davis', degree: 'B.Sc', specialization: 'Physics', passingYear: 2024, tenthMarks: 98, twelfthMarks: 96, degreeMarks: 92, marksType: 'percentage', resumeUrl: '#' },
-    { id: 4, name: 'David Evans', degree: 'B.Tech', specialization: 'Electrical Engineering', passingYear: 2025, tenthMarks: 85, twelfthMarks: 80, degreeMarks: 81, marksType: 'percentage', resumeUrl: '#' },
-    { id: 5, name: 'Fatima Khan', degree: 'B.Tech', specialization: 'Computer Science', passingYear: 2024, tenthMarks: 91, twelfthMarks: 94, degreeMarks: 9.2, marksType: 'cgpa', cgpaOutOf: 10, resumeUrl: '#' },
-    { id: 6, name: 'Gaurav Mehta', degree: 'M.C.A', specialization: 'Computer Applications', passingYear: 2023, tenthMarks: 78, twelfthMarks: 75, degreeMarks: 78, marksType: 'percentage', resumeUrl: '#' },
-];
+
 
 // --- HELPER COMPONENTS ---
 
@@ -164,15 +155,39 @@ const DashboardView = ({ criteria, setCriteria }) => {
 
 const AllApplicationsView = () => {
     const [searchTerm, setSearchTerm] = useState('');
+    const [applicants, setApplicants] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-    const filteredApplicants = mockApplicants.filter(applicant =>
+    useEffect(() => {
+        const fetchApplications = async () => {
+            try {
+                const res = await fetch("http://localhost:5000/userinfosave/applications"); // 🔗 Flask API
+                const data = await res.json();
+                if (data.status === "success") {
+                    setApplicants(data.applications);
+                }
+            } catch (error) {
+                console.error("Error fetching applications:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchApplications();
+    }, []);
+
+    const filteredApplicants = applicants.filter(applicant =>
         applicant.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
+
+    if (loading) {
+        return <p className="text-gray-400 text-center">Loading applications...</p>;
+    }
 
     return (
         <div>
             <h2 className="text-3xl font-bold text-white mb-6">All Applications</h2>
             
+            {/* Search Bar */}
             <div className="mb-6 relative">
                 <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                     <svg className="w-5 h-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
@@ -188,9 +203,13 @@ const AllApplicationsView = () => {
                 />
             </div>
 
+            {/* Applicants Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredApplicants.length > 0 ? (
-                    filteredApplicants.map(app => <ApplicantCard key={app.id} applicant={app} />)
+                    filteredApplicants.map(app => <ApplicantCard key={app.id} applicant={{
+                        ...app,
+                        resumeUrl: app.resume // map Flask "resume" field to ApplicantCard
+                    }} />)
                 ) : (
                     <div className="text-center bg-gray-800 p-8 rounded-lg md:col-span-3">
                         <p className="text-gray-400">No applicants found matching your search.</p>
@@ -200,6 +219,7 @@ const AllApplicationsView = () => {
         </div>
     );
 };
+
 
 const ParsingView = ({ onStartParsing }) => (
     <div className="text-center bg-gray-800 p-8 rounded-lg">
@@ -332,5 +352,3 @@ export default function App() {
         </div>
     );
 }
-
-
