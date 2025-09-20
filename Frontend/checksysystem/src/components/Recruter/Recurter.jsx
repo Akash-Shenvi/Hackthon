@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from "axios"; // Install: npm install axios
-
+import { Loader2, CheckCircle2, XCircle,ChevronDown, ChevronUp } from "lucide-react";
 
 // --- HELPER COMPONENTS ---
 
@@ -110,7 +110,7 @@ const DashboardView = ({ criteria, setCriteria }) => {
 
       // Send to backend
       const response = await axios.post(
-        "http://localhost:5000/setcriteria", // Change URL if Spring Boot (e.g., http://localhost:8080/api/criteria)
+        "http://localhost:5000/userinfosave/setcriteria", // Change URL if Spring Boot (e.g., http://localhost:8080/api/criteria)
         formData,
         {
           headers: {
@@ -296,34 +296,363 @@ const AllApplicationsView = () => {
 };
 
 
-const ParsingView = ({ onStartParsing }) => (
-    <div className="text-center bg-gray-800 p-8 rounded-lg">
-        <h2 className="text-3xl font-bold text-white mb-4">Start Resume Parsing</h2>
-        <p className="text-gray-400 mb-8 max-w-xl mx-auto">Click the button below to filter candidates based on the criteria you set. This will move qualified candidates to the 'Results' section.</p>
-        <button 
-            onClick={onStartParsing}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg transition-all duration-300 transform hover:scale-105"
-        >
-            Start Filtering
-        </button>
-    </div>
-);
+const ParsingView = () => {
+  const [loading, setLoading] = useState(false);
+  const [results, setResults] = useState(null);
+  const [error, setError] = useState(null);
 
+  const startParsing = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      setResults(null);
 
-const ResultsView = ({ filteredApplicants }) => (
-    <div>
-        <h2 className="text-3xl font-bold text-white mb-6">Filtered Results</h2>
-        {filteredApplicants.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredApplicants.map(app => <ApplicantCard key={app.id} applicant={app} />)}
-            </div>
+      const response = await fetch("http://localhost:5000/userinfosave/parse_all", {
+        method: "POST",
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to parse resumes");
+      }
+
+      setResults(data);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="text-center bg-gray-800 p-8 rounded-2xl shadow-xl">
+      <h2 className="text-3xl font-bold text-white mb-4">
+        Start Resume Parsing
+      </h2>
+      <p className="text-gray-400 mb-8 max-w-xl mx-auto">
+        Click the button below to filter candidates based on the criteria you
+        set. This will move qualified candidates to the <b>Results</b> section.
+      </p>
+
+      <button
+        onClick={startParsing}
+        disabled={loading}
+        className={`${
+          loading ? "bg-gray-600" : "bg-indigo-600 hover:bg-indigo-700"
+        } text-white font-bold py-3 px-8 rounded-lg shadow-lg transition-all duration-300 transform ${
+          !loading && "hover:scale-105"
+        }`}
+      >
+        {loading ? (
+          <span className="flex items-center justify-center gap-2">
+            <Loader2 className="animate-spin" size={20} />
+            Parsing...
+          </span>
         ) : (
-            <div className="text-center bg-gray-800 p-8 rounded-lg">
-                <p className="text-gray-400">No applicants match the current criteria, or filtering has not been run yet.</p>
-            </div>
+          "Start Filtering"
         )}
+      </button>
+
+      {/* ✅ Success Results */}
+      {results && (
+        <div className="mt-6 bg-gray-700 p-6 rounded-lg text-left">
+          <h3 className="text-lg font-semibold text-green-400 mb-2 flex items-center gap-2">
+            <CheckCircle2 size={20} /> {results.message}
+          </h3>
+          <ul className="text-gray-300 text-sm space-y-2">
+            {results.results?.map((res) => (
+              <li key={res.student_id} className="border-b border-gray-600 pb-2">
+                <span className="font-bold text-white">{res.name}</span> —{" "}
+                Score: <span className="text-indigo-400">{res.final_weighted_score}</span>, Verdict:{" "}
+                <span
+                  className={`${
+                    res.fit_verdict === "Fit"
+                      ? "text-green-400"
+                      : "text-red-400"
+                  } font-semibold`}
+                >
+                  {res.fit_verdict}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* ❌ Error Handling */}
+      {error && (
+        <div className="mt-6 bg-red-900/50 p-4 rounded-lg flex items-center gap-2 text-red-300">
+          <XCircle size={20} />
+          {error}
+        </div>
+      )}
     </div>
-);
+  );
+};
+
+const ResultsView = () => {
+  const [students, setStudents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [expandedId, setExpandedId] = useState(null);
+
+  // Sorting & filtering state
+  const [minScore, setMinScore] = useState(0);
+  const [sortOrder, setSortOrder] = useState("desc"); // "asc" | "desc"
+
+  const fetchAnalyzed = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch("http://localhost:5000/userinfosave/analyzed");
+      const data = await res.json();
+      if (res.ok && data.analyzed_students) {
+        setStudents(data.analyzed_students);
+      } else {
+        setStudents([]);
+      }
+    } catch (err) {
+      console.error("❌ Error fetching analyzed students:", err);
+      setStudents([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAnalyzed();
+  }, []);
+
+  const toggleExpand = (id) => {
+    setExpandedId(expandedId === id ? null : id);
+  };
+
+  // ✅ DELETE one analysis
+  const handleDelete = async (analysisId) => {
+    try {
+      const res = await fetch(
+        `http://localhost:5000/userinfosave/analysis/delete/${analysisId}`,
+        { method: "DELETE" }
+      );
+      if (res.ok) {
+        fetchAnalyzed(); // refresh list
+      }
+    } catch (err) {
+      console.error("❌ Error deleting analysis:", err);
+    }
+  };
+
+  // ✅ DELETE all analyses
+  const handleDeleteAll = async () => {
+    try {
+      const res = await fetch("http://localhost:5000/userinfosave/analysis/delete_all", {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        fetchAnalyzed(); // refresh list
+      }
+    } catch (err) {
+      console.error("❌ Error deleting all analyses:", err);
+    }
+  };
+
+  // ✅ Apply filter + sort
+  const processedStudents = students
+    .map((student) => {
+      const latestAnalysis =
+        student.analyses && student.analyses.length > 0
+          ? student.analyses[student.analyses.length - 1]
+          : null;
+      return { ...student, latestAnalysis };
+    })
+    .filter(
+      (s) =>
+        s.latestAnalysis &&
+        Number(s.latestAnalysis.final_weighted_score) >= minScore
+    )
+    .sort((a, b) => {
+      const scoreA = Number(a.latestAnalysis.final_weighted_score);
+      const scoreB = Number(b.latestAnalysis.final_weighted_score);
+      return sortOrder === "asc" ? scoreA - scoreB : scoreB - scoreA;
+    });
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="animate-spin text-indigo-500" size={40} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6">
+      <h2 className="text-3xl font-bold text-white mb-6">Analyzed Results</h2>
+
+      {/* 🔎 Filters + Sorting */}
+      <div className="flex flex-wrap gap-4 mb-6 items-center">
+        <div>
+          <label className="text-gray-300 text-sm">Minimum Score:</label>
+          <input
+            type="number"
+            value={minScore}
+            onChange={(e) => setMinScore(Number(e.target.value))}
+            className="ml-2 px-3 py-1 rounded bg-gray-700 text-white border border-gray-600 w-20"
+          />
+        </div>
+
+        <div>
+          <label className="text-gray-300 text-sm">Sort By Score:</label>
+          <select
+            value={sortOrder}
+            onChange={(e) => setSortOrder(e.target.value)}
+            className="ml-2 px-3 py-1 rounded bg-gray-700 text-white border border-gray-600"
+          >
+            <option value="desc">High → Low</option>
+            <option value="asc">Low → High</option>
+          </select>
+        </div>
+
+        {/* 🗑 Delete All Button */}
+        <button
+          onClick={handleDeleteAll}
+          className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+        >
+          Delete All Analyses
+        </button>
+      </div>
+
+      {processedStudents.length > 0 ? (
+        <div className="space-y-6">
+          {processedStudents.map((student) => {
+            const isExpanded = expandedId === student.id;
+            const latestAnalysis = student.latestAnalysis;
+
+            return (
+              <div
+                key={student.id}
+                className="bg-gray-800 rounded-lg shadow-lg p-6 transition hover:shadow-xl"
+              >
+                {/* Basic Info Row */}
+                <div
+                  className="flex justify-between items-center cursor-pointer"
+                  onClick={() => toggleExpand(student.id)}
+                >
+                  <div>
+                    <h3 className="text-xl font-semibold text-white">
+                      {student.name}
+                    </h3>
+                    <p className="text-gray-400 text-sm">{student.email}</p>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    {latestAnalysis && (
+                      <>
+                        <span className="text-indigo-400 font-bold">
+                          Score: {latestAnalysis.final_weighted_score}
+                        </span>
+                        <span
+                          className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                            latestAnalysis.fit_verdict === "Fit"
+                              ? "bg-green-600 text-white"
+                              : "bg-red-600 text-white"
+                          }`}
+                        >
+                          {latestAnalysis.fit_verdict}
+                        </span>
+                      </>
+                    )}
+                    {isExpanded ? (
+                      <ChevronUp className="text-gray-400" />
+                    ) : (
+                      <ChevronDown className="text-gray-400" />
+                    )}
+                  </div>
+                </div>
+
+                {/* Expandable Details */}
+                {isExpanded && latestAnalysis && (
+                  <div className="mt-4 border-t border-gray-700 pt-4 space-y-3 text-gray-300 text-sm">
+                    <p>
+                      <span className="font-semibold text-white">Phone:</span>{" "}
+                      {student.phone}
+                    </p>
+                    <p>
+                      <span className="font-semibold text-white">Degree:</span>{" "}
+                      {student.degree} ({student.specialization})
+                    </p>
+                    <p>
+                      <span className="font-semibold text-white">
+                        Passing Year:
+                      </span>{" "}
+                      {student.passingYear}
+                    </p>
+                    <p>
+                      <span className="font-semibold text-white">Marks:</span>{" "}
+                      10th: {student.tenthMarks}, 12th: {student.twelfthMarks},
+                      Degree: {student.degreeMarks}
+                    </p>
+
+                    <div className="mt-3">
+                      <h4 className="font-semibold text-indigo-400 mb-1">
+                        Detailed Scores
+                      </h4>
+                      <ul className="list-disc ml-6 space-y-1">
+                        <li>Hard Match: {latestAnalysis.hard_match_score}</li>
+                        <li>
+                          Relevance Score: {latestAnalysis.relevance_score}
+                        </li>
+                      </ul>
+                    </div>
+
+                    {latestAnalysis.missing_elements && (
+                      <div className="mt-3">
+                        <h4 className="font-semibold text-yellow-400 mb-1">
+                          Missing Elements
+                        </h4>
+                        <p>{latestAnalysis.missing_elements}</p>
+                      </div>
+                    )}
+
+                    {latestAnalysis.personalized_feedback && (
+                      <div className="mt-3">
+                        <h4 className="font-semibold text-green-400 mb-1">
+                          Personalized Feedback
+                        </h4>
+                        <p>{latestAnalysis.personalized_feedback}</p>
+                      </div>
+                    )}
+
+                    {latestAnalysis.summary_for_recruiter && (
+                      <div className="mt-3">
+                        <h4 className="font-semibold text-blue-400 mb-1">
+                          Recruiter Summary
+                        </h4>
+                        <p>{latestAnalysis.summary_for_recruiter}</p>
+                      </div>
+                    )}
+
+                    {/* 🗑 Delete Single Analysis Button */}
+                    <button
+                      onClick={() => handleDelete(latestAnalysis.id)}
+                      className="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                    >
+                      Delete This Analysis
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="text-center bg-gray-800 p-8 rounded-lg">
+          <p className="text-gray-400">
+            No analyzed students match the filter.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+};
+
 
 
 // --- MAIN APP COMPONENT ---

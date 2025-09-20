@@ -376,6 +376,7 @@ def delete_all_students():
         count = Student.query.delete()
 
         db.session.commit()
+        delete_all_jds()
 
         return jsonify({"status": "success", "message": f"Deleted all students, analyses, and resumes ({count} students)"}), 200
 
