@@ -1,16 +1,14 @@
-from flask import Blueprint, request, jsonify
-
-userinfosave = Blueprint("userinfosave", __name__)
-
-
+from flask import Blueprint, request, jsonify, send_from_directory, url_for
 import os
-from flask import Blueprint, request, jsonify
 from werkzeug.utils import secure_filename
-from CheckSystem.models import db, Student as UserInfo  # import your DB and model
+from CheckSystem.models import db, Student as UserInfo
 
-# Folder where resumes will be stored
-UPLOAD_FOLDER = "resume"
+userinfosave = Blueprint("userinfosave", __name__)  # ✅ use __name__
+
+# Folder where resumes will be stored (absolute path for safety)
+UPLOAD_FOLDER = os.path.join(os.getcwd(), "resume")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
 
 @userinfosave.route("/save", methods=["POST"])
 def save_user_info():
@@ -71,3 +69,43 @@ def save_user_info():
         print("❌ Error:", e)
         return jsonify({"status": "error", "message": str(e)}), 500
 
+
+@userinfosave.route("/applications", methods=["GET"])
+def get_all_applications():
+    try:
+        students = UserInfo.query.all()
+        applications = []
+
+        for student in students:
+            resume_link = None
+            if student.resumepath:
+                resume_filename = os.path.basename(student.resumepath)
+                resume_link = url_for("userinfosave.get_resume", filename=resume_filename, _external=True)
+
+            applications.append({
+                "id": student.id,
+                "name": student.name,
+                "email": student.email,
+                "phone": student.phone,
+                "degree": student.degree,
+                "specialization": student.specialization,
+                "passingYear": student.passingYear,
+                "tenthMarks": student.tenthMarks,
+                "twelfthMarks": student.twelfthMarks,
+                "degreeMarks": student.degreeMarks,
+                "resume": resume_link
+            })
+
+        return jsonify({"status": "success", "applications": applications}), 200
+
+    except Exception as e:
+        print("❌ Error:", e)
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@userinfosave.route("/resume/<filename>", methods=["GET"])
+def get_resume(filename):
+    try:
+        return send_from_directory(UPLOAD_FOLDER, filename, as_attachment=False)
+    except FileNotFoundError:
+        return jsonify({"status": "error", "message": "Resume not found"}), 404  # ✅ use 404
