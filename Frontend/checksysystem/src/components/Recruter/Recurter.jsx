@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-
+import axios from "axios"; // Install: npm install axios
 
 
 // --- HELPER COMPONENTS ---
@@ -61,96 +61,171 @@ const InputField = ({ name, label, type = 'text', value, onChange, placeholder, 
 
 // --- PAGE COMPONENTS ---
 
+
+
+
+
 const DashboardView = ({ criteria, setCriteria }) => {
-    const [jobDescriptionFile, setJobDescriptionFile] = useState(null);
-    const [fileName, setFileName] = useState('');
-    const [error, setError] = useState('');
-    const [successMessage, setSuccessMessage] = useState('');
+  const [jobDescriptionFile, setJobDescriptionFile] = useState(null);
+  const [fileName, setFileName] = useState("");
+  const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
 
-    const handleChange = (e) => {
-        const { name, value } = e.target;
-        setCriteria(prev => ({ ...prev, [name]: value }));
-    };
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setCriteria((prev) => ({ ...prev, [name]: value }));
+  };
 
-    const handleFileChange = (e) => {
-        const file = e.target.files[0];
-        if (file && file.type === 'application/pdf') {
-            setJobDescriptionFile(file);
-            setFileName(file.name);
-            setError('');
-        } else {
-            setJobDescriptionFile(null);
-            setFileName('');
-            setError('Invalid file type. Please upload a PDF file.');
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file && file.type === "application/pdf") {
+      setJobDescriptionFile(file);
+      setFileName(file.name);
+      setError("");
+    } else {
+      setJobDescriptionFile(null);
+      setFileName("");
+      setError("Invalid file type. Please upload a PDF file.");
+    }
+  };
+
+  const handleSetCriteria = async () => {
+    if (!jobDescriptionFile) {
+      setError("Please upload a Job Description PDF before setting criteria.");
+      setSuccessMessage("");
+      return;
+    }
+
+    try {
+      setError("");
+
+      // Prepare FormData for file + criteria
+      const formData = new FormData();
+      formData.append("jobDescription", jobDescriptionFile);
+
+      // Append criteria fields
+      for (const key in criteria) {
+        formData.append(key, criteria[key]);
+      }
+
+      // Send to backend
+      const response = await axios.post(
+        "http://localhost:5000/setcriteria", // Change URL if Spring Boot (e.g., http://localhost:8080/api/criteria)
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
         }
-    };
+      );
 
-    const handleSetCriteria = () => {
-        if (!jobDescriptionFile) {
-            setError('Please upload a Job Description PDF before setting criteria.');
-            setSuccessMessage('');
-            return;
-        }
-        setError('');
-        // Simulate sending data to a backend
-        console.log("--- Criteria to be set in backend ---");
-        console.log("Academic Criteria:", criteria);
-        console.log("Job Description File:", jobDescriptionFile);
-        
-        setSuccessMessage('Criteria and Job Description have been set successfully!');
-        setTimeout(() => setSuccessMessage(''), 3000); // Clear message after 3 seconds
-    };
+      console.log("✅ Response:", response.data);
+      setSuccessMessage("Criteria and Job Description have been set successfully!");
+      setTimeout(() => setSuccessMessage(""), 3000);
+    } catch (err) {
+      console.error("❌ Upload failed:", err);
+      setError("Failed to send data to backend. Please try again.");
+    }
+  };
 
-
-    return (
-        <div>
-            <h2 className="text-3xl font-bold text-white mb-6">Set Job Criteria</h2>
-            <div className="flex flex-col gap-8">
-                {/* Job Description */}
-                <div className="bg-gray-800 p-6 rounded-lg">
-                    <label className="block text-lg font-medium text-gray-200 mb-2">Job Description</label>
-                    <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-600 border-dashed rounded-md">
-                        <div className="space-y-1 text-center">
-                            <Icon path="M9 13.5l3 3m0 0l3-3m-3 3v-6m1.06-4.19l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" className="mx-auto h-12 w-12 text-gray-500" />
-                            <div className="flex text-sm text-gray-400">
-                                <label htmlFor="jd-upload" className="relative cursor-pointer bg-gray-800 rounded-md font-medium text-indigo-400 hover:text-indigo-300 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-offset-gray-800 focus-within:ring-indigo-500">
-                                    <span>Upload JD (PDF)</span>
-                                    <input id="jd-upload" name="jd-upload" type="file" className="sr-only" onChange={handleFileChange} accept=".pdf" />
-                                </label>
-                                <p className="pl-1">or drag and drop</p>
-                            </div>
-                             {fileName && <p className="text-sm text-green-400 pt-2">{fileName}</p>}
-                        </div>
-                    </div>
-                </div>
-
-                {/* Minimum Criteria */}
-                <div className="bg-gray-800 p-6 rounded-lg">
-                    <h3 className="text-lg font-medium text-gray-200 mb-4">Minimum Academic Criteria</h3>
-                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                        <InputField name="passingYear" label="Max. Passing Year" type="number" value={criteria.passingYear} onChange={handleChange} placeholder="e.g., 2024" />
-                        <InputField name="tenthMarks" label="Min. 10th Marks (%)" type="number" value={criteria.tenthMarks} onChange={handleChange} placeholder="e.g., 75" />
-                        <InputField name="twelfthMarks" label="Min. 12th Marks (%)" type="number" value={criteria.twelfthMarks} onChange={handleChange} placeholder="e.g., 75" />
-                        <InputField name="degreeMarks" label="Min. Degree Marks" type="number" value={criteria.degreeMarks} onChange={handleChange} placeholder="e.g., 8.0 or 80" />
-                    </div>
-                </div>
-
-                 {/* Action Button and Messages */}
-                <div>
-                    {error && <p className="text-red-400 text-sm mb-4 text-center">{error}</p>}
-                    {successMessage && <p className="text-green-400 text-sm mb-4 text-center">{successMessage}</p>}
-                    <div className="flex justify-end">
-                        <button 
-                            onClick={handleSetCriteria}
-                            className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg transition-all duration-300 transform hover:scale-105"
-                        >
-                            Set Criteria & JD
-                        </button>
-                    </div>
-                </div>
+  return (
+    <div>
+      <h2 className="text-3xl font-bold text-white mb-6">Set Job Criteria</h2>
+      <div className="flex flex-col gap-8">
+        {/* Job Description */}
+        <div className="bg-gray-800 p-6 rounded-lg">
+          <label className="block text-lg font-medium text-gray-200 mb-2">
+            Job Description
+          </label>
+          <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-600 border-dashed rounded-md">
+            <div className="space-y-1 text-center">
+              <div className="flex text-sm text-gray-400">
+                <label
+                  htmlFor="jd-upload"
+                  className="relative cursor-pointer bg-gray-800 rounded-md font-medium text-indigo-400 hover:text-indigo-300 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-offset-gray-800 focus-within:ring-indigo-500"
+                >
+                  <span>Upload JD (PDF)</span>
+                  <input
+                    id="jd-upload"
+                    name="jd-upload"
+                    type="file"
+                    className="sr-only"
+                    onChange={handleFileChange}
+                    accept=".pdf"
+                  />
+                </label>
+                <p className="pl-1">or drag and drop</p>
+              </div>
+              {fileName && (
+                <p className="text-sm text-green-400 pt-2">{fileName}</p>
+              )}
             </div>
+          </div>
         </div>
-    );
+
+        {/* Minimum Criteria */}
+        <div className="bg-gray-800 p-6 rounded-lg">
+          <h3 className="text-lg font-medium text-gray-200 mb-4">
+            Minimum Academic Criteria
+          </h3>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <InputField
+              name="passingYear"
+              label="Max. Passing Year"
+              type="number"
+              value={criteria.passingYear}
+              onChange={handleChange}
+              placeholder="e.g., 2024"
+            />
+            <InputField
+              name="tenthMarks"
+              label="Min. 10th Marks (%)"
+              type="number"
+              value={criteria.tenthMarks}
+              onChange={handleChange}
+              placeholder="e.g., 75"
+            />
+            <InputField
+              name="twelfthMarks"
+              label="Min. 12th Marks (%)"
+              type="number"
+              value={criteria.twelfthMarks}
+              onChange={handleChange}
+              placeholder="e.g., 75"
+            />
+            <InputField
+              name="degreeMarks"
+              label="Min. Degree Marks"
+              type="number"
+              value={criteria.degreeMarks}
+              onChange={handleChange}
+              placeholder="e.g., 8.0 or 80"
+            />
+          </div>
+        </div>
+
+        {/* Action Button and Messages */}
+        <div>
+          {error && (
+            <p className="text-red-400 text-sm mb-4 text-center">{error}</p>
+          )}
+          {successMessage && (
+            <p className="text-green-400 text-sm mb-4 text-center">
+              {successMessage}
+            </p>
+          )}
+          <div className="flex justify-end">
+            <button
+              onClick={handleSetCriteria}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg transition-all duration-300 transform hover:scale-105"
+            >
+              Set Criteria & JD
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 const AllApplicationsView = () => {
