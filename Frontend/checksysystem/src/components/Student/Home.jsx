@@ -84,7 +84,7 @@ export default function App() {
         submissionData.append('resume', resumeFile);
 
         try {
-            const response = await fetch("http://localhost:5000/apply", {
+            const response = await fetch("http://localhost:5000/userinfosave/save", {
                 method: "POST",
                 body: submissionData,
             });
