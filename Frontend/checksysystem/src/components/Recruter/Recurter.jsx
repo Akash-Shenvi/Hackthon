@@ -233,22 +233,51 @@ const AllApplicationsView = () => {
     const [applicants, setApplicants] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        const fetchApplications = async () => {
-            try {
-                const res = await fetch("http://localhost:5000/userinfosave/applications"); // 🔗 Flask API
-                const data = await res.json();
-                if (data.status === "success") {
-                    setApplicants(data.applications);
-                }
-            } catch (error) {
-                console.error("Error fetching applications:", error);
-            } finally {
-                setLoading(false);
+    const fetchApplications = async () => {
+        try {
+            const res = await fetch("http://localhost:5000/userinfosave/applications"); // 🔗 Flask API
+            const data = await res.json();
+            if (data.status === "success") {
+                setApplicants(data.applications);
             }
-        };
+        } catch (error) {
+            console.error("Error fetching applications:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
         fetchApplications();
     }, []);
+
+    // 🗑 Delete one student
+    const handleDelete = async (studentId) => {
+        try {
+            const res = await fetch(`http://localhost:5000/userinfosave/student/delete/${studentId}`, {
+                method: "DELETE",
+            });
+            if (res.ok) {
+                fetchApplications(); // refresh
+            }
+        } catch (error) {
+            console.error("Error deleting student:", error);
+        }
+    };
+
+    // 🗑 Delete all students
+    const handleDeleteAll = async () => {
+        try {
+            const res = await fetch("http://localhost:5000/userinfosave/student/delete_all", {
+                method: "DELETE",
+            });
+            if (res.ok) {
+                fetchApplications(); // refresh
+            }
+        } catch (error) {
+            console.error("Error deleting all students:", error);
+        }
+    };
 
     const filteredApplicants = applicants.filter(applicant =>
         applicant.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -261,30 +290,54 @@ const AllApplicationsView = () => {
     return (
         <div>
             <h2 className="text-3xl font-bold text-white mb-6">All Applications</h2>
-            
-            {/* Search Bar */}
-            <div className="mb-6 relative">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                    <svg className="w-5 h-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-                    </svg>
-                </span>
-                <input
-                    type="text"
-                    placeholder="Search by applicant name..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full bg-gray-800 text-white border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 py-3 pl-10 pr-3 transition"
-                />
+
+            {/* Top Bar: Search + Delete All */}
+            <div className="mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
+                {/* Search Bar */}
+                <div className="relative w-full md:w-2/3">
+                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                        <svg className="w-5 h-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                        </svg>
+                    </span>
+                    <input
+                        type="text"
+                        placeholder="Search by applicant name..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full bg-gray-800 text-white border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 py-3 pl-10 pr-3 transition"
+                    />
+                </div>
+
+                {/* Delete All Button */}
+                <button
+                    onClick={handleDeleteAll}
+                    className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                >
+                    Delete All Students
+                </button>
             </div>
 
             {/* Applicants Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredApplicants.length > 0 ? (
-                    filteredApplicants.map(app => <ApplicantCard key={app.id} applicant={{
-                        ...app,
-                        resumeUrl: app.resume // map Flask "resume" field to ApplicantCard
-                    }} />)
+                    filteredApplicants.map(app => (
+                        <div key={app.id} className="relative">
+                            <ApplicantCard
+                                applicant={{
+                                    ...app,
+                                    resumeUrl: app.resume // map Flask "resume" field to ApplicantCard
+                                }}
+                            />
+                            {/* Delete One Student Button */}
+                            <button
+                                onClick={() => handleDelete(app.id)}
+                                className="absolute top-2 right-2 px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700"
+                            >
+                                Delete
+                            </button>
+                        </div>
+                    ))
                 ) : (
                     <div className="text-center bg-gray-800 p-8 rounded-lg md:col-span-3">
                         <p className="text-gray-400">No applicants found matching your search.</p>
