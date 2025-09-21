@@ -36,7 +36,7 @@ Follow these instructions to set up and run the project locally.
 
 1.  **Clone the repository:**
     ```bash
-    git clone [https://github.com/](https://github.com/)[your-username]/[your-repo].git
+    git clone https://github.com/Akash-Shenvi/Hackthon
     cd [your-repo]/Backend
     ```
 
