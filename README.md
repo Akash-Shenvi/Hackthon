@@ -63,8 +63,7 @@ Follow these instructions to set up and run the project locally.
     # Add any other variables like DATABASE_URL if you have one
     ```
 
-5.  **Initialize the database (if applicable):**
-    `[Add instructions here if you have a database that needs migration, e.g., flask db upgrade]`
+5.  **Initialize the database:**
 
 ### Frontend Setup
 
