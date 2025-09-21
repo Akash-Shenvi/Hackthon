@@ -17,8 +17,8 @@ An intelligent system designed to automate the process of screening resumes agai
 
 ## Tech Stack 🛠️
 
-- **Backend**: Python, Flask/FastAPI `[Choose one and remove the other]`, PyMuPDF, python-docx, Google Generative AI
-- **Frontend**: Vite, React/Vue.js `[Choose one and remove the other]`
+- **Backend**: Python, Flask, PyMuPDF, python-docx, Google Generative AI
+- **Frontend**: Vite, React/Vue.js
 - **API**: RESTful API for communication between frontend and backend.
 - **LLM**: Google Gemini API
 
