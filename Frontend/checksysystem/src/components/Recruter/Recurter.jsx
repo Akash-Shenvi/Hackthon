@@ -110,7 +110,7 @@ const DashboardView = ({ criteria, setCriteria }) => {
 
       // Send to backend
       const response = await axios.post(
-        "http://localhost:5000/userinfosave/setcriteria", // Change URL if Spring Boot (e.g., http://localhost:8080/api/criteria)
+        "https://rani.pythonanywhere.com/userinfosave/setcriteria", // Change URL if Spring Boot (e.g., http://localhost:8080/api/criteria)
         formData,
         {
           headers: {
@@ -235,7 +235,7 @@ const AllApplicationsView = () => {
 
     const fetchApplications = async () => {
         try {
-            const res = await fetch("http://localhost:5000/userinfosave/applications"); // 🔗 Flask API
+            const res = await fetch("https://rani.pythonanywhere.com/userinfosave/applications"); // 🔗 Flask API
             const data = await res.json();
             if (data.status === "success") {
                 setApplicants(data.applications);
@@ -254,7 +254,7 @@ const AllApplicationsView = () => {
     // 🗑 Delete one student
     const handleDelete = async (studentId) => {
         try {
-            const res = await fetch(`http://localhost:5000/userinfosave/student/delete/${studentId}`, {
+            const res = await fetch(`https://rani.pythonanywhere.com/userinfosave/student/delete/${studentId}`, {
                 method: "DELETE",
             });
             if (res.ok) {
@@ -268,7 +268,7 @@ const AllApplicationsView = () => {
     // 🗑 Delete all students
     const handleDeleteAll = async () => {
         try {
-            const res = await fetch("http://localhost:5000/userinfosave/student/delete_all", {
+            const res = await fetch("https://rani.pythonanywhere.com/userinfosave/student/delete_all", {
                 method: "DELETE",
             });
             if (res.ok) {
@@ -360,7 +360,7 @@ const ParsingView = () => {
       setError(null);
       setResults(null);
 
-      const response = await fetch("http://localhost:5000/userinfosave/parse_all", {
+      const response = await fetch("https://rani.pythonanywhere.com/userinfosave/parse_all", {
         method: "POST",
       });
 
@@ -456,7 +456,7 @@ const ResultsView = () => {
   const fetchAnalyzed = async () => {
     try {
       setLoading(true);
-      const res = await fetch("http://localhost:5000/userinfosave/analyzed");
+      const res = await fetch("https://rani.pythonanywhere.com/userinfosave/analyzed");
       const data = await res.json();
       if (res.ok && data.analyzed_students) {
         setStudents(data.analyzed_students);
@@ -483,7 +483,7 @@ const ResultsView = () => {
   const handleDelete = async (analysisId) => {
     try {
       const res = await fetch(
-        `http://localhost:5000/userinfosave/analysis/delete/${analysisId}`,
+        `https://rani.pythonanywhere.com/userinfosave/analysis/delete/${analysisId}`,
         { method: "DELETE" }
       );
       if (res.ok) {
@@ -497,7 +497,7 @@ const ResultsView = () => {
   // ✅ DELETE all analyses
   const handleDeleteAll = async () => {
     try {
-      const res = await fetch("http://localhost:5000/userinfosave/analysis/delete_all", {
+      const res = await fetch("https://rani.pythonanywhere.com/userinfosave/analysis/delete_all", {
         method: "DELETE",
       });
       if (res.ok) {

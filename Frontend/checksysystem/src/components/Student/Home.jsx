@@ -84,7 +84,7 @@ export default function App() {
         submissionData.append('resume', resumeFile);
 
         try {
-            const response = await fetch("http://localhost:5000/userinfosave/save", {
+            const response = await fetch("https://rani.pythonanywhere.com/userinfosave/save", {
                 method: "POST",
                 body: submissionData,
             });
